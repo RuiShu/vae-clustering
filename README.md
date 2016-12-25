@@ -20,7 +20,7 @@ M2 performs poorly as an unsupervised clustering algorithm. We suspect this is a
 
 The experiments are implemented using TensorFlow. Since all of the three aforementioned models share very similar formulations, the shared subgraphs are placed in `shared_subgraphs.py`. The `utils.py` file contains some additional functions used during training. The remaining `*.py` files simply implement the three main model classes and other variants that we tried.
 
-We recommend first reading the Jupyter Notebook on [nbviewer](http://nbviewer.jupyter.org/github/RuiShu/vae-clustering/blob/master/experiments.ipynb).
+We recommend first reading the Jupyter Notebook on [nbviewer](http://nbviewer.jupyter.org/github/RuiShu/vae-clustering/blob/master/experiments.ipynb) in the Chrome browser.
 
 ### Dependencies
 
