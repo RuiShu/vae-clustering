@@ -1,6 +1,7 @@
 from tensorbayes.utils import progbar
 from scipy.stats import mode
 import numpy as np
+import os.path
 
 def stream_print(f, string, pipe_to_file=True):
     print string
@@ -9,9 +10,10 @@ def stream_print(f, string, pipe_to_file=True):
         f.flush()
 
 def test_acc(mnist, sess, qy_logit):
-    cat_pred = sess.run(qy_logit, feed_dict={'x:0': mnist.test.images}).argmax(1)
+    logits = sess.run(qy_logit, feed_dict={'x:0': mnist.test.images})
+    cat_pred = logits.argmax(1)
     real_pred = np.zeros_like(cat_pred)
-    for cat in xrange(10):
+    for cat in xrange(logits.shape[1]):
         idx = cat_pred == cat
         lab = mnist.test.labels.argmax(1)[idx]
         if len(lab) == 0:
@@ -19,9 +21,18 @@ def test_acc(mnist, sess, qy_logit):
         real_pred[cat_pred == cat] = mode(lab).mode[0]
     return np.mean(real_pred == mnist.test.labels.argmax(1))
 
+def open_file(fname):
+    if fname is None:
+        return None
+    else:
+        i = 0
+        while os.path.isfile('{:s}.{:d}'.format(fname, i)):
+            i += 1
+        return open('{:s}.{:d}'.format(fname, i), 'w', 0)
+
 def train(fname, mnist, sess_info, epochs):
     (sess, qy_logit, nent, loss, train_step) = sess_info
-    f = open(fname, 'w', 0) if fname is not None else None
+    f = open_file(fname)
     iterep = 500
     for i in range(iterep * epochs):
         sess.run(train_step, feed_dict={'x:0': mnist.train.next_batch(100)[0]})

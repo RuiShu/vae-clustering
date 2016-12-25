@@ -6,13 +6,13 @@ import numpy as np
 import sys
 
 # vae subgraphs
-def qy_graph(x):
+def qy_graph(x, k=10):
     reuse = len(tf.get_collection(tf.GraphKeys.VARIABLES, scope='qy')) > 0
     # -- q(y)
     with tf.variable_scope('qy'):
         h1 = Dense(x, 512, 'layer1', tf.nn.relu, reuse=reuse)
         h2 = Dense(h1, 512, 'layer2', tf.nn.relu, reuse=reuse)
-        qy_logit = Dense(h2, 10, 'logit', reuse=reuse)
+        qy_logit = Dense(h2, k, 'logit', reuse=reuse)
         qy = tf.nn.softmax(qy_logit, name='prob')
     return qy_logit, qy
 

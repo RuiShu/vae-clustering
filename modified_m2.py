@@ -80,4 +80,4 @@ sess = tf.Session()
 sess.run(tf.initialize_all_variables())
 # sess.run(tf.global_variables_initializer()) # Change initialization protocol depending on tensorflow version
 sess_info = (sess, qy_logit, nent, loss, train_step)
-train('logs/modified_m2_method={:s}.log'.format(method), mnist, sess_info, epochs=10000)
+train('logs/modified_m2_method={:s}.log'.format(method), mnist, sess_info, epochs=1000)

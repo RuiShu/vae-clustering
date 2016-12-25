@@ -11,18 +11,38 @@ from shared_subgraphs import qy_graph, qz_graph, labeled_loss
 from utils import train
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 
+try:
+    method = sys.argv[1]
+except IndexError:
+    raise Exception('Pass an argument specifying identity/relu/layer\n'
+                    'e.g. python modified_m2.py identity')
+
+def custom_layer(zy, reuse):
+    # Here are 3 choices for what to do with zy
+    # I leave this as hyperparameter
+    if method == 'identity':
+        return zy
+    elif method == 'relu':
+        return tf.nn.relu(zy)
+    elif method == 'layer':
+        return Dense(zy, 512, 'layer1', tf.nn.relu, reuse=reuse)
+    else:
+        raise Exception('Undefined method')
+
 def px_graph(z, y):
     reuse = len(tf.get_collection(tf.GraphKeys.VARIABLES, scope='px')) > 0
-    # -- p(z)
-    with tf.variable_scope('pz'):
+    # -- transform z to be a sample from one of the Gaussian mixture components
+    with tf.variable_scope('z_transform'):
         zm = Dense(y, 64, 'zm', reuse=reuse)
-        zv = Dense(y, 64, 'zv', tf.nn.softplus, reuse=reuse)
+        zv = Dense(y, 64, 'zv', reuse=reuse)
     # -- p(x)
     with tf.variable_scope('px'):
-        h1 = Dense(z, 512, 'layer1', tf.nn.relu, reuse=reuse)
+        with tf.name_scope('layer1'):
+            zy = zm + zv * z
+            h1 = custom_layer(zy, reuse)
         h2 = Dense(h1, 512, 'layer2', tf.nn.relu, reuse=reuse)
         px_logit = Dense(h2, 784, 'logit', reuse=reuse)
-    return zm, zv, px_logit
+    return px_logit
 
 tf.reset_default_graph()
 x = Placeholder((None, 784), 'x')
@@ -37,12 +57,12 @@ with tf.name_scope('y_'):
 qy_logit, qy = qy_graph(xb)
 
 # for each proposed y, infer z and reconstruct x
-z, zm, zv, zm_prior, zv_prior, px_logit = [[None] * 10 for i in xrange(6)]
+z, zm, zv, px_logit = [[None] * 10 for i in xrange(4)]
 for i in xrange(10):
     with tf.name_scope('graphs/hot_at{:d}'.format(i)):
         y = tf.add(y_, Constant(np.eye(10)[i], name='hot_at_{:d}'.format(i)))
         z[i], zm[i], zv[i] = qz_graph(xb, y)
-        zm_prior[i], zv_prior[i], px_logit[i] = px_graph(z[i], y)
+        px_logit[i] = px_graph(z[i], y)
 
 # Aggressive name scoping for pretty graph visualization :P
 with tf.name_scope('loss'):
@@ -51,7 +71,7 @@ with tf.name_scope('loss'):
     losses = [None] * 10
     for i in xrange(10):
         with tf.name_scope('loss_at{:d}'.format(i)):
-            losses[i] = labeled_loss(xb, px_logit[i], z[i], zm[i], zv[i], zm_prior[i], zv_prior[i])
+            losses[i] = labeled_loss(xb, px_logit[i], z[i], zm[i], zv[i], Constant(0), Constant(1))
     with tf.name_scope('final_loss'):
         loss = tf.add_n([nent] + [qy[:, i] * losses[i] for i in xrange(10)])
 
@@ -60,4 +80,4 @@ sess = tf.Session()
 sess.run(tf.initialize_all_variables())
 # sess.run(tf.global_variables_initializer()) # Change initialization protocol depending on tensorflow version
 sess_info = (sess, qy_logit, nent, loss, train_step)
-train('logs/gmvae.log', mnist, sess_info, epochs=1000)
+train('logs/modified_novar_m2_method={:s}.log'.format(method), mnist, sess_info, epochs=1000)
